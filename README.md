@@ -60,6 +60,14 @@ register_eigen_printers(None)
 end
 ```
 
+## Usage
+
+To plot multiple matrices at the same time give multiple addresses to the imshow command
+
+``` 
+(gdb) imshow addr1 addr2 addr3 ... addrN
+```
+
 ## Customizing the printer
 
 Since NumPy is used to render the matrix, you can adjust [NumPy's printing options](https://numpy.org/doc/stable/reference/generated/numpy.set_printoptions.html) in your gdb session to tweak the appearance. This can be done directly in gdb:
@@ -87,6 +95,11 @@ register_eigen_printers(None)
 np.set_printoptions(linewidth=200, formatter={'float': lambda x: "{:5.2f}".format(x) if x !=0 else "     "})
 end
 ```
+
+## Credits
+
+ - Original version: [libeigen](https://gitlab.com/libeigen)
+ - Formatting handled by numpy: [eigengdb](https://github.com/dmillard/eigengdb)
 
 ## License
 
