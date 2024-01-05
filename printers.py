@@ -1,29 +1,28 @@
-#!/usr/bin/env python
-
 # -*- coding: utf-8 -*-
 # This file is part of Eigen, a lightweight C++ template library
 # for linear algebra.
 #
 # Copyright (C) 2009 Benjamin Schindler <bschindler@inf.ethz.ch>
-# Copyright (C) 2019 David Millard <dmillard@usc.edu>
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 # Pretty printers for Eigen::Matrix
-# This is still pretty basic as the python extension to gdb is still pretty basic.
+# This is still pretty basic as the python extension to gdb is still pretty basic. 
 # It cannot handle complex eigen types and it doesn't support many of the other eigen types
 # This code supports fixed size as well as dynamic size matrices
 
 # To use it:
 #
-# * Create a directory and put the file as well as an empty __init__.py in
+# * Create a directory and put the file as well as an empty __init__.py in 
 #   that directory.
 # * Create a ~/.gdbinit file, that contains the following:
 #      python
+#      import sys
+#      sys.path.insert(0, '/path/to/eigen/printer/directory')
 #      from printers import register_eigen_printers
-#      register_eigen_printers (None)
+#      register_eigen_printers(None)
 #      end
 
 import gdb
@@ -31,6 +30,8 @@ import re
 import itertools
 import numpy as np
 from bisect import bisect_left
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 
 
 # Basic row/column iteration code for use with Sparse and Dense matrices
@@ -165,10 +166,13 @@ class EigenMatrixPrinter:
                     pass
                 mat[row, col] = float(item)
 
+        ptr = self.data.dereference()
+        mat_imgs_dict[str(ptr.address)] = mat
+        
         return "Eigen::%s<%s,%d,%d,%s> (data ptr: %s)\n%s\n" % (
             self.variety, self.innerType, self.rows, self.cols,
             "RowMajor" if self.rowMajor else "ColMajor", self.data, mat)
-
+            
 
 class EigenSparseMatrixPrinter:
     "Print an Eigen SparseMatrix"
@@ -362,4 +366,30 @@ def lookup_function(val):
 
 pretty_printers_dict = {}
 
+mat_imgs_dict = {}
+
 build_eigen_dictionary()
+
+class ImShow(gdb.Command):
+    """Show matrix (given data ptr) as image"""
+    
+    def __init__(self):
+        super (ImShow, self).__init__ ("imshow", gdb.COMMAND_USER, gdb.COMPLETE_EXPRESSION)
+
+    def invoke(self, arg, from_tty):
+        ptrs = str(arg).split()
+        try:
+            for ptr in ptrs:
+                fig, ax = plt.subplots()
+                extent = (0, mat_imgs_dict[ptr].shape[1], mat_imgs_dict[ptr].shape[0], 0)
+                plt.imshow(mat_imgs_dict[ptr], extent=extent)
+                plt.grid(color='w', linewidth=2)
+                ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+                ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+                plt.title(ptr)
+            plt.show()
+        except Exception as e:
+            raise gdb.GdbError("Error: {}".format(str(e)))
+            
+ImShow()
+
